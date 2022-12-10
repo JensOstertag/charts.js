@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Charts Demo</title>
+
+    <!-- STYLES -->
+    <link href="./style/site.min.css" rel="stylesheet">
+    <link href="./style/charts.min.css" rel="stylesheet">
+
+    <!-- FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <h1>
+      Charts Demo
+    </h1>
+    <p>
+      Randomized Chart
+    </p>
+    <canvas style="width: 600px; height: 400px;" id="chart-1">
+    </canvas>
+
+    <p>
+      All-positive Chart
+    </p>
+    <canvas style="width: 600px; height: 400px;" id="chart-2">
+    </canvas>
+
+    <p>
+      All-negative Chart
+    </p>
+    <canvas style="width: 600px; height: 400px;" id="chart-3">
+    </canvas>
+
+    <script src="./script/charts.js" ></script>
+    <script>
+      function getRandomArbitrary(min, max) {
+        // min *= 100;
+        // max *= 100;
+        return Math.round(Math.random() * (max - min) + min);
+      }
+
+      new Chart().create({
+        htmlElementId: "chart-1",
+        chartType: "curve",
+        chartStyle: {
+          mainColor: "#888888",
+          valueColors: [
+            "#2f7cff"
+          ],
+          fontFamily: "Lato"
+        },
+        data: {
+          keys: [
+            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+          ],
+          values: [
+            [
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10),
+              getRandomArbitrary(-5, 10)
+            ]
+          ]
+        }
+      });
+
+      new Chart().create({
+        htmlElementId: "chart-2",
+        chartType: "line",
+        chartStyle: {
+          mainColor: "#888888",
+          valueColors: [
+            "#2f7cff"
+          ],
+          fontFamily: "Lato"
+        },
+        data: {
+          keys: [
+            "0", "1", "2", "3", "4", "5"
+          ],
+          values: [
+            [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          ]
+        }
+      });
+
+      new Chart().create({
+        htmlElementId: "chart-3",
+        chartType: "line",
+        chartStyle: {
+          mainColor: "#888888",
+          valueColors: [
+            "#2f7cff"
+          ],
+          fontFamily: "Lato"
+        },
+        data: {
+          keys: [
+            "0", "1", "2", "3", "4", "5"
+          ],
+          values: [
+            [
+              0,
+              -1,
+              -2,
+              -3,
+              -4,
+              -5
+            ]
+          ]
+        }
+      });
+    </script>
+  </body>
+</html>
