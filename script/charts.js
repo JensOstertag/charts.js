@@ -93,8 +93,10 @@ class Chart {
         }
 
         // Y-Axis Labels
-        let previousYLabel = zeroHeight;
-        for(let i = minLabel; i <= maxLabel; i++) {
+        let yLabelFactor = (maxLabel - minLabel) / 10;
+        yLabelFactor = Math.ceil(yLabelFactor / Math.pow(10, Math.ceil(Math.log10(yLabelFactor)))) * Math.pow(10, Math.ceil(Math.log10(yLabelFactor)));
+        yLabelFactor = (yLabelFactor === 0) ? .1 : yLabelFactor;
+        for(let i = minLabel; i <= maxLabel; i += yLabelFactor) {
             let y = zeroHeight - i * pixelsPerYUnit + spaceFromTop + spaceFromBottom;
             this.drawYLabel(canvasContext, SIDE_SPACE * RESIZE_FACTOR, y, chartConfiguration.chartStyle.mainColor, i, (SIDE_SPACE - 10) * RESIZE_FACTOR);
         }
