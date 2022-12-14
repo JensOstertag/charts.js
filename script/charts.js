@@ -165,6 +165,7 @@ class Chart {
 
         // Context Settings for Y-Axis Labels
         context.textAlign = "right";
+        context.textBaseline = "middle";
 
         // Y-Axis Labels
         for(let i = this.extremeLabels.min; i <= this.extremeLabels.max; i += 1) {
