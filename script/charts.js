@@ -101,7 +101,7 @@ class Chart {
         // Add Space at the Top or Bottom if the Chart only has positive or negative Values
         this.topBottomSpace.top = (this.extremeValues.max === 0) ? SIDE_SPACE * this.resizeFactor : 0;
         this.topBottomSpace.bottom = (this.extremeValues.min === 0) ? SIDE_SPACE * this.resizeFactor : 0;
-
+        
         const dataPoints = chartConfiguration.data.keys.length;
         this.coordinateSystemSpace = {
             offsets: {
