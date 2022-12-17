@@ -92,11 +92,14 @@ class Chart {
         }
 
         // Add extra Space to the Axes to prevent cutting of Nodes or Curves
-        this.extremeValues.min = (this.extremeValues.min !== 0) ? Math.floor(this.extremeValues.min / 5) * 5 - 1.5 : 0;
-        this.extremeLabels.min = (this.extremeValues.min !== 0) ? Math.ceil(this.extremeValues.min / 5) * 5 : 0;
+        // Math.ceil(Math.log10(num + 1));
+        const minLength = Math.ceil(Math.log10(Math.abs(this.extremeValues.min) + 1));
+        const maxLength = Math.ceil(Math.log10(Math.abs(this.extremeValues.max) + 1));
+        this.extremeValues.min = (this.extremeValues.min !== 0) ? Math.floor(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) - Math.pow(10, minLength - 2) : 0;
+        this.extremeLabels.min = (this.extremeValues.min !== 0) ? Math.ceil(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) : 0;
 
-        this.extremeValues.max = (this.extremeValues.max !== 0) ? Math.ceil(this.extremeValues.max / 5) * 5 + 1.5 : 0;
-        this.extremeLabels.max = (this.extremeValues.max !== 0) ? Math.floor(this.extremeValues.max / 5) * 5 : 0;
+        this.extremeValues.max = (this.extremeValues.max !== 0) ? Math.ceil(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) + Math.pow(10, maxLength - 2) : 0;
+        this.extremeLabels.max = (this.extremeValues.max !== 0) ? Math.floor(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) : 0;
 
         // Add Space at the Top or Bottom if the Chart only has positive or negative Values
         this.topBottomSpace.top = (this.extremeValues.max === 0) ? SIDE_SPACE * this.resizeFactor : 0;
@@ -168,9 +171,12 @@ class Chart {
         context.textBaseline = "middle";
 
         // Y-Axis Labels
-        for(let i = this.extremeLabels.min; i <= this.extremeLabels.max; i += 1) {
+        const delta = (Math.abs(this.extremeLabels.min) + Math.abs(this.extremeLabels.max)) / 10;
+        const positivePart = Math.abs(this.extremeLabels.max) / (Math.abs(this.extremeValues.min) + Math.abs(this.extremeValues.max));
+        this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, this.getCanvasY(0), 0);
+        for(let i = this.extremeLabels.min; i <= this.extremeLabels.max; i += delta) {
             let coordinates = this.getCanvasCoordinates(0, i);
-            this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, coordinates.y, Math.round(i));
+            this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, coordinates.y, Math.round(i * 100) / 100);
         }
     }
 
