@@ -277,6 +277,11 @@ class Chart {
                 context.fill();
 
                 break;
+            case "bar":
+                context.beginPath();
+                context.rect(x - this.dataSpace.dataSpacing / 4, y, this.dataSpace.dataSpacing / 2, this.dataSpace.height - y + this.dataSpace.offsets.top);
+                context.stroke();
+                context.fill();
             default:
                 console.error("Invalid Chart Type: " + chartType);
         }

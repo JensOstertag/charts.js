@@ -38,11 +38,14 @@
     <canvas style="width: 600px; height: 400px;" id="chart-3">
     </canvas>
 
+    <p>
+      Bar Chart
+    </p>
+    <canvas style="width: 600px; height: 400px;" id="chart-4">
+
     <script src="./script/charts.js" ></script>
     <script>
       function getRandomArbitrary(min, max) {
-        // min *= 100;
-        // max *= 100;
         return Math.round(Math.random() * (max - min) + min);
       }
 
@@ -126,6 +129,33 @@
               -3,
               -4,
               -5
+            ]
+          ]
+        }
+      });
+
+      new Chart().create({
+        htmlElementId: "chart-4",
+        chartType: "bar",
+        chartStyle: {
+          mainColor: "#888888",
+          valueColors: [
+            "#2f7cff"
+          ],
+          fontFamily: "Lato"
+        },
+        data: {
+          keys: [
+            "0", "1", "2", "3", "4", "5"
+          ],
+          values: [
+            [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
             ]
           ]
         }
