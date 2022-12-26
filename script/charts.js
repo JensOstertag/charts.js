@@ -5,9 +5,12 @@ const resize = (value) => {
 
 const SIDE_SPACE = 25;
 
+const LABELS_PER_100_PIXELS = 3;
+
 class Chart {
     resizeFactor = RESIZE_FACTOR;
     leftRightSpace = SIDE_SPACE * this.resizeFactor;
+    labelsPer100Pixels = LABELS_PER_100_PIXELS;
     xAxisLabelsBelow = true;
     topBottomSpace = {
         top: 0,
@@ -91,15 +94,15 @@ class Chart {
             this.xAxisLabelsBelow = false;
         }
 
-        // Add extra Space to the Axes to prevent cutting of Nodes or Curves
-        // Math.ceil(Math.log10(num + 1));
+        // Add extra Space to the Axes to prevent cutting off Nodes or Curves
         const minLength = Math.ceil(Math.log10(Math.abs(this.extremeValues.min) + 1));
         const maxLength = Math.ceil(Math.log10(Math.abs(this.extremeValues.max) + 1));
-        this.extremeValues.min = (this.extremeValues.min !== 0) ? Math.floor(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) - Math.pow(10, minLength - 2) : 0;
-        this.extremeLabels.min = (this.extremeValues.min !== 0) ? Math.ceil(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) : 0;
 
-        this.extremeValues.max = (this.extremeValues.max !== 0) ? Math.ceil(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) + Math.pow(10, maxLength - 2) : 0;
+        this.extremeLabels.min = (this.extremeValues.min !== 0) ? Math.ceil(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) : 0;
+        this.extremeValues.min = (this.extremeValues.min !== 0) ? Math.floor(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) - 1.5 * Math.pow(10, Math.max(minLength, maxLength, 2) - 3) : 0; 
+
         this.extremeLabels.max = (this.extremeValues.max !== 0) ? Math.floor(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) : 0;
+        this.extremeValues.max = (this.extremeValues.max !== 0) ? Math.ceil(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) + 1.5 * Math.pow(10, Math.max(minLength, maxLength, 2) - 3) : 0;
 
         // Add Space at the Top or Bottom if the Chart only has positive or negative Values
         this.topBottomSpace.top = (this.extremeValues.max === 0) ? SIDE_SPACE * this.resizeFactor : 0;
@@ -140,8 +143,8 @@ class Chart {
      */
     drawCoordinateSystem = (context, chartConfiguration) => {
         // Context Settings for Coordinate System
-        context.strokeStyle = chartConfiguration.chartStyle.mainColor;
-        context.fillStyle = chartConfiguration.chartStyle.mainColor;
+        context.strokeStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
+        context.fillStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
         context.lineWidth = 1 * this.resizeFactor;
         context.font = 10 * this.resizeFactor + "px " + chartConfiguration.chartStyle.fontFamily;
 
@@ -171,12 +174,9 @@ class Chart {
         context.textBaseline = "middle";
 
         // Y-Axis Labels
-        const delta = (Math.abs(this.extremeLabels.min) + Math.abs(this.extremeLabels.max)) / 10;
-        const positivePart = Math.abs(this.extremeLabels.max) / (Math.abs(this.extremeValues.min) + Math.abs(this.extremeValues.max));
-        this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, this.getCanvasY(0), 0);
-        for(let i = this.extremeLabels.min; i <= this.extremeLabels.max; i += delta) {
+        for(let i = this.extremeLabels.min; i <= this.extremeLabels.max; i += 1) {
             let coordinates = this.getCanvasCoordinates(0, i);
-            this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, coordinates.y, Math.round(i * 100) / 100);
+            this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, coordinates.y, i);
         }
     }
 
@@ -250,8 +250,8 @@ class Chart {
      */
     drawDatapoints = (context, datasets, colors, chartType) => {
         datasets.forEach((dataset, datasetIndex) => {
-            context.strokeStyle = colors[datasetIndex] + "ff";
-            context.fillStyle = colors[datasetIndex] + "88";
+            context.strokeStyle = this.rgba(colors[datasetIndex], 1);
+            context.fillStyle = this.rgba(colors[datasetIndex], 0.5);
 
             dataset.forEach((datapoint, index) => {
                 let coordinates = this.getCanvasCoordinates(index, datapoint);
@@ -282,6 +282,8 @@ class Chart {
                 context.rect(x - this.dataSpace.dataSpacing / 4, y, this.dataSpace.dataSpacing / 2, this.dataSpace.height - y + this.dataSpace.offsets.top);
                 context.stroke();
                 context.fill();
+
+                break;
             default:
                 console.error("Invalid Chart Type: " + chartType);
         }
@@ -413,4 +415,13 @@ class Chart {
 
         return true;
     }
+
+    /**
+     * Get RGBA Color with Opacity Aspect
+     */
+    rgba = (color, opacity) => {
+        let alpha = Math.round(Math.min(Math.max(opacity || 1, 0), 1) * 255);
+        return color + alpha.toString(16).toLowerCase();
+    }
+
 }
