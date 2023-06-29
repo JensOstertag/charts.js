@@ -1,6 +1,9 @@
-const RESIZE_FACTOR = 2;
+const RESIZE_FACTOR = 1.5;
 const resize = (value) => {
     return value * RESIZE_FACTOR;
+}
+const reverseResize = (value) => {
+    return value / RESIZE_FACTOR;
 }
 
 const SIDE_SPACE = 50;
@@ -9,9 +12,7 @@ const LABELS_PER_100_PIXELS = 1;
 
 class Chart {
     resizeFactor = RESIZE_FACTOR;
-    leftRightSpace = SIDE_SPACE * this.resizeFactor;
     labelsPer100Pixels = LABELS_PER_100_PIXELS;
-    xAxisLabelsBelow = true;
     /*
         Measurement Overview
 
@@ -80,6 +81,7 @@ class Chart {
             spacingDecimals: 0,
         }
     };
+    chartType = "";
 
     /**
      * Creates a new Chart with the given ChartConfiguration
@@ -89,7 +91,7 @@ class Chart {
             throw "ChartConfiguration invalid";
         }
 
-        console.log(chartConfiguration);
+        this.chartType = chartConfiguration.chartType;
 
         let chartCanvas = document.getElementById(chartConfiguration.htmlElementId);
         let canvasContext = chartCanvas.getContext("2d");
@@ -151,10 +153,9 @@ class Chart {
             }
             this.data.labels.spacingDecimals = decimals;
         }
-        console.log(this.data.labels);
         this.data.labels.min = 0;
         this.data.labels.max = 0;
-        while(this.data.labels.min < this.data.extremeValues.min) {
+        while(this.data.labels.min > this.data.extremeValues.min) {
             this.data.labels.min -= this.data.labels.spacing;
         }
         while(this.data.labels.max < this.data.extremeValues.max) {
@@ -225,6 +226,9 @@ class Chart {
     calculateXLabelDistance = (chartConfiguration) => {
         let width = this.dimensions.chartData.width;
         let labels = chartConfiguration.data.keys.length;
+        if(chartConfiguration.chartType === "bar") {
+            labels += .5;
+        }
         let labelDistance = width / (labels - 1);
         return labelDistance;
     }
@@ -235,7 +239,7 @@ class Chart {
      */
     calculateYLabelDistance = () => {
         let extrema = Math.max(Math.abs(this.data.extremeValues.min), Math.abs(this.data.extremeValues.max));
-        let height = this.dimensions.chartData.height;
+        let height = reverseResize(this.dimensions.chartData.height);
         // TODO: Use relative Height of the Quadrant
         let labels = this.labelsPer100Pixels * (height / 100);
         let labelDistance = extrema / labels;
@@ -284,12 +288,14 @@ class Chart {
 
     /**
      * Translates an X Coordinate of the Chart Data to a X Coordinate of the Canvas
-     * @param {Number} nthValue 
+     * @param {Number} nthValue
      * @returns Canvas X Coordinate
      */
     translateXCoordinate = (nthValue) => {
-        // TODO: Translate X Coordinate to Canvas X Coordinate
         let offset = this.dimensions.chartData.offsets.lr + this.dimensions.coordinateSystem.offsets.lr;
+        if(this.chartType === "bar") {
+            nthValue += .25;
+        }
         let xCoordinate = offset + this.data.spacing * nthValue;
         return xCoordinate;
     }
@@ -348,10 +354,10 @@ class Chart {
                 break;
             case "bar":
                 let barWidth = this.data.spacing / 2;
+                let barHeight = y - this.translateYCoordinate(0);
 
                 context.beginPath();
-                context.rect(x - barWidth / 2, this.translateYCoordinate(0), barWidth, -y);
-                // context.rect(x - this.dataSpace.dataSpacing / 4, y, this.dataSpace.dataSpacing / 2, this.dataSpace.height - y + this.dataSpace.offsets.top);
+                context.rect(x - barWidth / 2, y, barWidth, -barHeight);
                 context.stroke();
                 context.fill();
 
