@@ -1,54 +1,85 @@
-const RESIZE_FACTOR = 20;
+const RESIZE_FACTOR = 2;
 const resize = (value) => {
     return value * RESIZE_FACTOR;
 }
 
-const SIDE_SPACE = 25;
+const SIDE_SPACE = 50;
 
-const LABELS_PER_100_PIXELS = 3;
+const LABELS_PER_100_PIXELS = 1;
 
 class Chart {
     resizeFactor = RESIZE_FACTOR;
     leftRightSpace = SIDE_SPACE * this.resizeFactor;
     labelsPer100Pixels = LABELS_PER_100_PIXELS;
     xAxisLabelsBelow = true;
-    topBottomSpace = {
-        top: 0,
-        bottom: 0
-    };
-    canvasSpace = {
-        width: 0,
-        height: 0
-    };
-    coordinateSystemSpace = {
-        offsets: {
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0
+    /*
+        Measurement Overview
+
+        Canvas Border
+        ████████████████████████████████████████████████████████████████████████████
+        █   Coordinate System Border        ↕ A                                    █
+        █   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   █
+        █   ▓   Graph Data Border           C ↕                     ↑          ▓   █
+        █   ▓   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ▓   █
+        █   ▓   ░          ↑                                        |      ░   ▓   █
+        █   ▓←--░----------+---------------- E ---------------------+------░--→▓   █
+        █   ▓   ░          |                                        |      ░   ▓   █
+        █   ▓   ░          |                                        |      ░   ▓   █
+        █←B→▓←D→░          H                                        G      ░←D→▓←B→█
+        █   ▓   ░          |                                        |      ░   ▓   █
+        █   ▓   ░          |                                        |      ░   ▓   █
+        █   ▓   ░←---------+---------------- F ---------------------+-----→░   ▓   █
+        █   ▓   ░          ↓                                        |      ░   ▓   █
+        █   ▓   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   ▓   █
+        █   ▓                               C ↕                     ↓          ▓   █
+        █   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   █
+        █                                   ↕ A                                    █
+        ████████████████████████████████████████████████████████████████████████████
+    */
+    // The Dimensions below are given in Canvas Pixels
+    dimensions = {
+        canvas: {
+            width: 0,
+            height: 0
+        },
+        coordinateSystem: {
+            width: 0, // E
+            height: 0, // G
+            // Extra Space at the Top, Bottom and on the Left and Right of the first / last Coordinate System Label
+            // It is included in the Coordinate System Width and Height
+            safeArea: 0,
+            offsets: {
+                lr: 0, // B
+                tb: 0 // A
+            },
+            // Extra Space that is needed for the Labels of the X Axis (not shown in the Representation above)
+            xLabelSpace: {
+                top: 0,
+                bottom: 0
+            }
+        },
+        chartData: {
+            width: 0, // F
+            height: 0, // H
+            offsets: {
+                lr: 0, // D
+                tb: 0 // C
+            }
         }
     };
-    dataSpace = {
-        width: 0,
-        height: 0,
-        offsets: {
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0
+    data = {
+        spacing: 0,
+        extremeValues: {
+            min: 0,
+            max: 0
         },
-        dataSpacing: 0
+        labels: {
+            min: 0,
+            max: 0,
+            spacing: 0,
+            spacingDecimals: 0,
+        }
     };
-    pixelsPerYUnit = 0;
-
-    extremeValues = {
-        min: 0,
-        max: 0
-    }
-    extremeLabels = {
-        min: 0,
-        max: 0
-    }
 
     /**
      * Creates a new Chart with the given ChartConfiguration
@@ -63,186 +94,218 @@ class Chart {
         let chartCanvas = document.getElementById(chartConfiguration.htmlElementId);
         let canvasContext = chartCanvas.getContext("2d");
 
-        // Set the CSize of the Canvas to the ClientSize of the HTML Element
-        chartCanvas.width = resize(chartCanvas.clientWidth);
-        chartCanvas.height = resize(chartCanvas.clientHeight);
-        
-        let width = chartCanvas.width;
-        let height = chartCanvas.height;
+        // Set the Size of the Canvas to the ClientSize of the HTML Element
+        chartCanvas.width = resize(resize(chartCanvas.clientWidth));
+        chartCanvas.height = resize(resize(chartCanvas.clientHeight));
+        // canvasContext.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-        this.canvasSpace = {
-            width: width,
-            height: height
-        };
-
-        this.leftRightSpace = SIDE_SPACE * this.resizeFactor;
-
-        // Get the Min and Max from all Values to scale the Axes
+        // Read the Min and Max Values from the Data
         chartConfiguration.data.values.forEach(dataset => {
             dataset.forEach(value => {
-                if(value > this.extremeValues.max) {
-                    this.extremeValues.max = value;
+                if(value > this.data.extremeValues.max) {
+                    this.data.extremeValues.max = value;
                 }
 
-                if(value < this.extremeValues.min) {
-                    this.extremeValues.min = value;
+                if(value < this.data.extremeValues.min) {
+                    this.data.extremeValues.min = value;
                 }
             });
         });
 
-        if(this.extremeValues.min < 0 && this.extremeValues.max === 0) {
-            this.xAxisLabelsBelow = false;
+        // Fill the Dimensions Object with the correct Values
+        this.dimensions.canvas.width = chartCanvas.width;
+        this.dimensions.canvas.height = chartCanvas.height;
+
+        this.dimensions.coordinateSystem.offsets.lr = resize(SIDE_SPACE);
+        this.dimensions.coordinateSystem.offsets.tb = 0;
+        this.dimensions.coordinateSystem.safeArea = resize(SIDE_SPACE);
+        // Add Extra Space at the Top or Bottom of the Coordinate System if all Values are negative or positive to ensure that the Labels are not cut off
+        if(this.data.extremeValues.min < 0 && this.data.extremeValues.max < 0) {
+            this.dimensions.coordinateSystem.xLabelSpace.top = resize(SIDE_SPACE); // TODO: Different Value 
+        } else if(this.data.extremeValues.min > 0 && this.data.extremeValues.max > 0) {
+            this.dimensions.coordinateSystem.xLabelSpace.bottom = resize(SIDE_SPACE); // TODO: Different Value
         }
+        this.dimensions.coordinateSystem.width = this.dimensions.canvas.width - this.dimensions.coordinateSystem.offsets.lr * 2;
+        this.dimensions.coordinateSystem.height = this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb * 2 - this.dimensions.coordinateSystem.xLabelSpace.top - this.dimensions.coordinateSystem.xLabelSpace.bottom;
 
-        // Add extra Space to the Axes to prevent cutting off Nodes or Curves
-        const minLength = Math.ceil(Math.log10(Math.abs(this.extremeValues.min) + 1));
-        const maxLength = Math.ceil(Math.log10(Math.abs(this.extremeValues.max) + 1));
-
-        this.extremeLabels.min = (this.extremeValues.min !== 0) ? Math.ceil(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) : 0;
-        this.extremeValues.min = (this.extremeValues.min !== 0) ? Math.floor(this.extremeValues.min / Math.pow(10, minLength - 2)) * Math.pow(10, minLength - 2) - 1.5 * Math.pow(10, Math.max(minLength, maxLength, 2) - 3) : 0; 
-
-        this.extremeLabels.max = (this.extremeValues.max !== 0) ? Math.floor(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) : 0;
-        this.extremeValues.max = (this.extremeValues.max !== 0) ? Math.ceil(this.extremeValues.max / Math.pow(10, maxLength - 2)) * Math.pow(10, maxLength - 2) + 1.5 * Math.pow(10, Math.max(minLength, maxLength, 2) - 3) : 0;
-
-        // Add Space at the Top or Bottom if the Chart only has positive or negative Values
-        this.topBottomSpace.top = (this.extremeValues.max === 0) ? SIDE_SPACE * this.resizeFactor : 0;
-        this.topBottomSpace.bottom = (this.extremeValues.min === 0) ? SIDE_SPACE * this.resizeFactor : 0;
+        this.dimensions.chartData.offsets.lr = this.dimensions.coordinateSystem.safeArea;
+        this.dimensions.chartData.offsets.tb = this.dimensions.coordinateSystem.safeArea;
+        this.dimensions.chartData.width = this.dimensions.coordinateSystem.width - this.dimensions.chartData.offsets.lr * 2;
+        this.dimensions.chartData.height = this.dimensions.coordinateSystem.height - this.dimensions.chartData.offsets.tb * 2;
         
-        const dataPoints = chartConfiguration.data.keys.length;
-        this.coordinateSystemSpace = {
-            offsets: {
-                left: this.leftRightSpace,
-                right: this.leftRightSpace,
-                top: this.topBottomSpace.top,
-                bottom: this.topBottomSpace.bottom
+        // Generate Scale for X Acis
+        this.data.spacing = this.calculateXLabelDistance(chartConfiguration);
+
+        // Generate Scale for Y Axis
+        this.data.labels.spacing = this.calculateYLabelDistance();
+        if(this.data.labels.spacing < 1) {
+            let decimals = 0;
+            let temp = this.data.labels.spacing;
+            while(temp <= 10) {
+                decimals++;
+                temp *= 10;
+
+                if(decimals > 10) {
+                    decimals = 10;
+                }
             }
-        };
-        this.dataSpace = {
-            width: width - this.leftRightSpace * 4,
-            height: height - this.topBottomSpace.top - this.topBottomSpace.bottom,
-            offsets: {
-                left: this.leftRightSpace * 2,
-                right: this.leftRightSpace * 2,
-                top: this.topBottomSpace.top,
-                bottom: this.topBottomSpace.bottom
-            }
+            this.data.labels.spacingDecimals = decimals;
+        }
+        console.log(this.data.labels);
+        this.data.labels.min = 0;
+        this.data.labels.max = 0;
+        while(this.data.labels.min < this.data.extremeValues.min) {
+            this.data.labels.min -= this.data.labels.spacing;
+        }
+        while(this.data.labels.max < this.data.extremeValues.max) {
+            this.data.labels.max += this.data.labels.spacing;
         }
 
-        this.dataSpace.dataSpacing = this.dataSpace.width / (dataPoints - 1);
-
-        // Calculate the Pixels per Unit for the Y Axis
-        this.pixelsPerYUnit = this.dataSpace.height / (Math.abs(this.extremeValues.min) + Math.abs(this.extremeValues.max));
-
-        // Draw Coordinate System and Datapoints
+        // Draw the Coordinate System
         this.drawCoordinateSystem(canvasContext, chartConfiguration);
-        this.drawDatapoints(canvasContext, chartConfiguration.data.values, chartConfiguration.chartStyle.valueColors, chartConfiguration.chartType);
+
+        // Draw the Data
+        this.drawData(canvasContext, chartConfiguration);
     }
 
-    /**
-     * Draws the Coordinate System
-     */
     drawCoordinateSystem = (context, chartConfiguration) => {
         // Context Settings for Coordinate System
         context.strokeStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
         context.fillStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
-        context.lineWidth = 1 * this.resizeFactor;
-        context.font = 10 * this.resizeFactor + "px " + chartConfiguration.chartStyle.fontFamily;
+        context.lineWidth = resize(3);
+        context.font = resize(20) + "px " + chartConfiguration.chartStyle.fontFamily;
 
         // X-Axis
         context.beginPath();
-        context.moveTo(this.coordinateSystemSpace.offsets.left, this.getCanvasY(0));
-        context.lineTo(this.canvasSpace.width - this.coordinateSystemSpace.offsets.right, this.getCanvasY(0));
+        context.moveTo(this.dimensions.coordinateSystem.offsets.lr, this.translateYCoordinate(0));
+        context.lineTo(this.dimensions.canvas.width - this.dimensions.coordinateSystem.offsets.lr, this.translateYCoordinate(0));
         context.stroke();
 
         // Y-Axis
         context.beginPath();
-        context.moveTo(this.coordinateSystemSpace.offsets.left, this.coordinateSystemSpace.offsets.top);
-        context.lineTo(this.coordinateSystemSpace.offsets.left, this.canvasSpace.height - this.coordinateSystemSpace.offsets.bottom);
+        context.moveTo(this.dimensions.coordinateSystem.offsets.lr, this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb);
+        context.lineTo(this.dimensions.coordinateSystem.offsets.lr, this.dimensions.coordinateSystem.offsets.tb);
         context.stroke();
-
-        // Context Settings for X-Axis Labels
-        context.textAlign = "center";
 
         // X-Axis Labels
-        chartConfiguration.data.keys.forEach((label, index) => {
-            let coordinates = this.getCanvasCoordinates(index, 0);
-            this.drawXLabel(context, coordinates.x, coordinates.y, label);
-        });
+        for(let i = 0; i < chartConfiguration.data.keys.length; i++) {
+            // Small Dash
+            context.beginPath();
+            context.moveTo(this.translateXCoordinate(i), this.translateYCoordinate(0));
+            context.lineTo(this.translateXCoordinate(i), this.translateYCoordinate(0) + resize(10));
+            context.stroke();
 
-        // Context Settings for Y-Axis Labels
-        context.textAlign = "right";
-        context.textBaseline = "middle";
+            // Label
+            context.fillText(chartConfiguration.data.keys[i], this.translateXCoordinate(i) - context.measureText(chartConfiguration.data.keys[i]).width / 2, this.translateYCoordinate(0) + resize(10) + resize(20));
+        }
 
         // Y-Axis Labels
-        for(let i = this.extremeLabels.min; i <= this.extremeLabels.max; i += 1) {
-            let coordinates = this.getCanvasCoordinates(0, i);
-            this.drawYLabel(context, this.coordinateSystemSpace.offsets.left, coordinates.y, i);
+        for(let label = this.data.labels.min; label <= this.data.labels.max; label += this.data.labels.spacing) {
+            // Small Dash
+            context.beginPath();
+            context.moveTo(this.dimensions.coordinateSystem.offsets.lr, this.translateYCoordinate(label));
+            context.lineTo(this.dimensions.coordinateSystem.offsets.lr - resize(10), this.translateYCoordinate(label));
+            context.stroke();
+
+            // Label
+            let labelString = label.toFixed(this.data.labels.spacingDecimals);
+            context.fillText(labelString, this.dimensions.coordinateSystem.offsets.lr - resize(10) - context.measureText(labelString).width, this.translateYCoordinate(label) + resize(6.25));
+        }
+    }
+
+    drawData = (context, chartConfiguration) => {
+        this.drawDatapoints(context, chartConfiguration.data.values, chartConfiguration.chartStyle.valueColors, chartConfiguration.chartType);
+    }
+
+    /**
+     * Calculates the Distance between two X-Axis Labels
+     * @param {Number} chartConfiguration 
+     * @returns {Number} Distance between two X-Axis Labels
+     */
+    calculateXLabelDistance = (chartConfiguration) => {
+        let width = this.dimensions.chartData.width;
+        let labels = chartConfiguration.data.keys.length;
+        let labelDistance = width / (labels - 1);
+        return labelDistance;
+    }
+
+    /**
+     * Calculates the Distance between two Y-Axis Labels
+     * @returns {Number} Distance between two Y-Axis Labels
+     */
+    calculateYLabelDistance = () => {
+        let extrema = Math.max(Math.abs(this.data.extremeValues.min), Math.abs(this.data.extremeValues.max));
+        let height = this.dimensions.chartData.height;
+        // TODO: Use relative Height of the Quadrant
+        let labels = this.labelsPer100Pixels * (height / 100);
+        let labelDistance = extrema / labels;
+        return this.beautifyNumber(labelDistance);
+    }
+
+    /**
+     * Beautifies a Number to a more Human-readable Number
+     * @param {Number} number 
+     * @returns {Number} Beatified Number
+     */
+    beautifyNumber = (number) => {
+        if(number >= 1 && number < 10) {
+            // Round up to 1, 2, 5 or 10
+            if(number <= 1)
+                number = 1;
+            else if(number < 2)
+                number = 2;
+            else if(number < 5)
+                number = 5;
+            else if(number < 10)
+                number = 10;
+            return number;
+        }
+        
+        if(number >= 10 && number < 100) {
+            // Round up to next tenth Place
+            number = Math.ceil(number / 10) * 10;
+            return number;
+        }
+        
+        if(number >= 100 || number < 1) {
+            // Round up to the second largest Digit
+            let largestExponent = Math.pow(10, Math.floor(Math.log10(number)) - 1);
+            number = Math.ceil(number / largestExponent) * largestExponent;
+            
+            // Check whether the second Digit is 0 or 5
+            let secondDigit = Math.floor(number / largestExponent) % 10;
+            if(secondDigit !== 0 && secondDigit !== 5) {
+                number = number + Math.min(10 - secondDigit, 5 - secondDigit) * largestExponent;
+            }
+            
+            return number;
         }
     }
 
     /**
-     * Prints a Warning to the Console if the given Coordinate is out of Bounds
+     * Translates an X Coordinate of the Chart Data to a X Coordinate of the Canvas
+     * @param {Number} nthValue 
+     * @returns Canvas X Coordinate
      */
-    coordinateOutOfBoundsWarning = (x, y) => {
-        if(x < 0 || x > this.canvasSpace.width || y < 0 || y > this.canvasSpace.height) {
-            console.warn("Coordinate out of bounds: (" + x + ", " + y + ")");
-        }
+    translateXCoordinate = (nthValue) => {
+        // TODO: Translate X Coordinate to Canvas X Coordinate
+        let offset = this.dimensions.chartData.offsets.lr + this.dimensions.coordinateSystem.offsets.lr;
+        let xCoordinate = offset + this.data.spacing * nthValue;
+        return xCoordinate;
     }
 
     /**
-     * Calculates the Canvas Coordinates for the nth Datapoint
+     * Translates a Y Coordinate of the Chart Data to a Y Coordinate of the Canvas
+     * @param {Number} y 
+     * @returns Canvas Y Coordinate
      */
-    getCanvasCoordinates = (nthValue, coordinateSystemY) => {
-        const canvasX = this.getCanvasX(nthValue);
-        const canvasY = this.getCanvasY(coordinateSystemY);
-        return {x: canvasX, y: canvasY};
-    }
-
-    /**
-     * Calculates the Canvas X-Coordinate for the nth Datapoint
-     */
-    getCanvasX = (nthValue) => {
-        const canvasX = this.dataSpace.offsets.left + nthValue * this.dataSpace.dataSpacing;
-        this.coordinateOutOfBoundsWarning(canvasX, 0);
-        return canvasX;
-    }
-
-    /**
-     * Calculates the Canvas Y-Coordinate for the given Coordinate System Y-Coordinate
-     */
-    getCanvasY = (coordinateSystemY) => {
-        let heightPercentage = (coordinateSystemY - this.extremeValues.min) / (this.extremeValues.max - this.extremeValues.min);
-        let canvasY = this.dataSpace.offsets.top + (1 - heightPercentage) * this.dataSpace.height;
-        this.coordinateOutOfBoundsWarning(0, canvasY);
-        return canvasY;
-    }
-
-    /**
-     * Draws a Label on the X-Axis
-     */
-    drawXLabel = (context, x, y, label) => {
-        context.beginPath();
-        context.moveTo(x, y);
-        context.lineTo(x, (this.xAxisLabelsBelow ? 5 : -5) * this.resizeFactor + y);
-        context.stroke();
-
-        context.beginPath();
-        context.fillText(label, x, (this.xAxisLabelsBelow ? SIDE_SPACE / 2 : -SIDE_SPACE / 2) * this.resizeFactor + y, this.dataSpace.dataSpacing);
-        context.stroke();
-    }
-
-    /**
-     * Draws a Label on the Y-Axis
-     */
-    drawYLabel = (context, x, y, label) => {
-        context.beginPath();
-        context.moveTo(x, y);
-        context.lineTo(x - 5 * this.resizeFactor, y);
-        context.stroke();
-
-        context.beginPath();
-        context.fillText(label, x - 10 * this.resizeFactor, y, this.coordinateSystemSpace.offsets.left - 10);
-        context.stroke();
+    translateYCoordinate = (y) => {
+        let min = this.data.labels.min, max = this.data.labels.max;
+        let height = this.dimensions.chartData.height;
+        let offset = this.dimensions.chartData.offsets.tb + this.dimensions.coordinateSystem.offsets.tb + this.dimensions.coordinateSystem.xLabelSpace.top;
+        let heightPercentage = (y - min) / (max - min);
+        let yCoordinate = offset + height * (1 - heightPercentage);
+        return yCoordinate;
     }
 
     /**
@@ -263,6 +326,12 @@ class Chart {
         });
     }
 
+    getCanvasCoordinates = (nthValue, datapoint) => {
+        let x = this.translateXCoordinate(nthValue);
+        let y = this.translateYCoordinate(datapoint);
+        return {x: x, y: y};
+    }
+
     /**
      * Draws a single Datapoint at a specific Position
      */
@@ -278,8 +347,11 @@ class Chart {
 
                 break;
             case "bar":
+                let barWidth = this.data.spacing / 2;
+
                 context.beginPath();
-                context.rect(x - this.dataSpace.dataSpacing / 4, y, this.dataSpace.dataSpacing / 2, this.dataSpace.height - y + this.dataSpace.offsets.top);
+                context.rect(x - barWidth / 2, this.translateYCoordinate(0), barWidth, -y);
+                // context.rect(x - this.dataSpace.dataSpacing / 4, y, this.dataSpace.dataSpacing / 2, this.dataSpace.height - y + this.dataSpace.offsets.top);
                 context.stroke();
                 context.fill();
 
