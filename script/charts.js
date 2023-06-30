@@ -1,4 +1,4 @@
-const RESIZE_FACTOR = 1.5;
+const RESIZE_FACTOR = 10;
 const resize = (value) => {
     return value * RESIZE_FACTOR;
 }
@@ -97,8 +97,8 @@ class Chart {
         let canvasContext = chartCanvas.getContext("2d");
 
         // Set the Size of the Canvas to the ClientSize of the HTML Element
-        chartCanvas.width = resize(resize(chartCanvas.clientWidth));
-        chartCanvas.height = resize(resize(chartCanvas.clientHeight));
+        chartCanvas.width = resize(chartCanvas.clientWidth);
+        chartCanvas.height = resize(chartCanvas.clientHeight);
         // canvasContext.scale(window.devicePixelRatio, window.devicePixelRatio);
 
         // Read the Min and Max Values from the Data
@@ -173,7 +173,7 @@ class Chart {
         // Context Settings for Coordinate System
         context.strokeStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
         context.fillStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
-        context.lineWidth = resize(3);
+        context.lineWidth = resize(2);
         context.font = resize(20) + "px " + chartConfiguration.chartStyle.fontFamily;
 
         // X-Axis
@@ -347,7 +347,7 @@ class Chart {
             case "line":
             case "curve":
                 context.beginPath();
-                context.arc(x, y, 2.5 * this.resizeFactor, 0, 2 * Math.PI);
+                context.arc(x, y, resize(2.5), 0, 2 * Math.PI);
                 context.stroke();
                 context.fill();
 
@@ -501,5 +501,4 @@ class Chart {
         let alpha = Math.round(Math.min(Math.max(opacity || 1, 0), 1) * 255);
         return color + alpha.toString(16).toLowerCase();
     }
-
 }
