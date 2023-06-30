@@ -1,4 +1,4 @@
-const RESIZE_FACTOR = 10;
+const RESIZE_FACTOR = 1;
 const resize = (value) => {
     return value * RESIZE_FACTOR;
 }
@@ -7,8 +7,9 @@ const reverseResize = (value) => {
 }
 
 const SIDE_SPACE = 50;
+const SAFE_AREA = 30;
 
-const LABELS_PER_100_PIXELS = 1;
+const LABELS_PER_100_PIXELS = 2;
 
 class Chart {
     resizeFactor = RESIZE_FACTOR;
@@ -52,11 +53,6 @@ class Chart {
             offsets: {
                 lr: 0, // B
                 tb: 0 // A
-            },
-            // Extra Space that is needed for the Labels of the X Axis (not shown in the Representation above)
-            xLabelSpace: {
-                top: 0,
-                bottom: 0
             }
         },
         chartData: {
@@ -120,15 +116,9 @@ class Chart {
 
         this.dimensions.coordinateSystem.offsets.lr = resize(SIDE_SPACE);
         this.dimensions.coordinateSystem.offsets.tb = 0;
-        this.dimensions.coordinateSystem.safeArea = resize(SIDE_SPACE);
-        // Add Extra Space at the Top or Bottom of the Coordinate System if all Values are negative or positive to ensure that the Labels are not cut off
-        if(this.data.extremeValues.min < 0 && this.data.extremeValues.max < 0) {
-            this.dimensions.coordinateSystem.xLabelSpace.top = resize(SIDE_SPACE); // TODO: Different Value 
-        } else if(this.data.extremeValues.min > 0 && this.data.extremeValues.max > 0) {
-            this.dimensions.coordinateSystem.xLabelSpace.bottom = resize(SIDE_SPACE); // TODO: Different Value
-        }
+        this.dimensions.coordinateSystem.safeArea = resize(SAFE_AREA);
         this.dimensions.coordinateSystem.width = this.dimensions.canvas.width - this.dimensions.coordinateSystem.offsets.lr * 2;
-        this.dimensions.coordinateSystem.height = this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb * 2 - this.dimensions.coordinateSystem.xLabelSpace.top - this.dimensions.coordinateSystem.xLabelSpace.bottom;
+        this.dimensions.coordinateSystem.height = this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb * 2;
 
         this.dimensions.chartData.offsets.lr = this.dimensions.coordinateSystem.safeArea;
         this.dimensions.chartData.offsets.tb = this.dimensions.coordinateSystem.safeArea;
@@ -184,8 +174,16 @@ class Chart {
 
         // Y-Axis
         context.beginPath();
-        context.moveTo(this.dimensions.coordinateSystem.offsets.lr, this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb);
-        context.lineTo(this.dimensions.coordinateSystem.offsets.lr, this.dimensions.coordinateSystem.offsets.tb);
+        let fromY = this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb, toY = this.dimensions.coordinateSystem.offsets.tb;
+        if(this.data.extremeValues.min <= 0 && this.data.extremeValues.max <= 0) {
+            toY += this.dimensions.coordinateSystem.safeArea;
+        }
+        if(this.data.extremeValues.min >= 0 && this.data.extremeValues.max >= 0) {
+            fromY -= this.dimensions.coordinateSystem.safeArea;
+        }
+        console.log(fromY + " -- " + toY);
+        context.moveTo(this.dimensions.coordinateSystem.offsets.lr, fromY);
+        context.lineTo(this.dimensions.coordinateSystem.offsets.lr, toY);
         context.stroke();
 
         // X-Axis Labels
@@ -308,7 +306,7 @@ class Chart {
     translateYCoordinate = (y) => {
         let min = this.data.labels.min, max = this.data.labels.max;
         let height = this.dimensions.chartData.height;
-        let offset = this.dimensions.chartData.offsets.tb + this.dimensions.coordinateSystem.offsets.tb + this.dimensions.coordinateSystem.xLabelSpace.top;
+        let offset = this.dimensions.chartData.offsets.tb + this.dimensions.coordinateSystem.offsets.tb;
         let heightPercentage = (y - min) / (max - min);
         let yCoordinate = offset + height * (1 - heightPercentage);
         return yCoordinate;
