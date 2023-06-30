@@ -188,6 +188,8 @@ class Chart {
 
         // X-Axis Labels
         for(let i = 0; i < chartConfiguration.data.keys.length; i++) {
+            // TODO: Place Labels on top of the X-Axis if all Values are negative
+
             // Small Dash
             context.beginPath();
             context.moveTo(this.translateXCoordinate(i), this.translateYCoordinate(0));
@@ -238,7 +240,17 @@ class Chart {
     calculateYLabelDistance = () => {
         let extrema = Math.max(Math.abs(this.data.extremeValues.min), Math.abs(this.data.extremeValues.max));
         let height = reverseResize(this.dimensions.chartData.height);
-        // TODO: Use relative Height of the Quadrant
+
+        // Use relative Size of the Quadrant to calculate the amount of Labels that should be used for it
+        let yScaleHeight = Math.abs(this.data.extremeValues.min) + Math.abs(this.data.extremeValues.max);
+        if(this.data.extremeValues.min <= 0 && this.data.extremeValues.max <= 0) {
+            yScaleHeight = Math.max(extrema, Math.abs(this.data.extremeValues.min));
+        } else if(this.data.extremeValues.min >= 0 && this.data.extremeValues.max >= 0) {
+            yScaleHeight = Math.max(extrema, Math.abs(this.data.extremeValues.max));
+        }
+        let relativeIntervalSize = extrema / yScaleHeight;
+        height *= relativeIntervalSize;
+
         let labels = this.labelsPer100Pixels * (height / 100);
         let labelDistance = extrema / labels;
         return this.beautifyNumber(labelDistance);
