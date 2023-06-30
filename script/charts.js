@@ -279,6 +279,11 @@ class Chart {
             if(secondDigit !== 0 && secondDigit !== 5) {
                 number = number + Math.min(10 - secondDigit, 5 - secondDigit) * largestExponent;
             }
+
+            // Don't go over .5
+            if(number > .5) {
+                number = 1;
+            }
             
             return number;
         }
