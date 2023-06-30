@@ -1,10 +1,4 @@
-const RESIZE_FACTOR = 1;
-const resize = (value) => {
-    return value * RESIZE_FACTOR;
-}
-const reverseResize = (value) => {
-    return value / RESIZE_FACTOR;
-}
+const RESIZE_FACTOR = 5;
 
 const SIDE_SPACE = 50;
 const SAFE_AREA = 30;
@@ -13,6 +7,12 @@ const LABELS_PER_100_PIXELS = 2;
 
 class Chart {
     resizeFactor = RESIZE_FACTOR;
+    resize = (value) => {
+        return value * this.resizeFactor;
+    }
+    reverseResize = (value) => {
+        return value / this.resizeFactor;
+    }
     labelsPer100Pixels = LABELS_PER_100_PIXELS;
     /*
         Measurement Overview
@@ -92,10 +92,22 @@ class Chart {
         let chartCanvas = document.getElementById(chartConfiguration.htmlElementId);
         let canvasContext = chartCanvas.getContext("2d");
 
+        // Reduce the Resize Factor if the Canvas is too big
+        let width = this.resize(chartCanvas.clientWidth), height = this.resize(chartCanvas.clientHeight);
+        // Maximum Size for a Canvas Element on IE 11
+        let maxWidth = 8192, maxHeight = 8192;
+        if(width > maxWidth) {
+            this.resizeFactor *= maxWidth / width;
+            width = this.resize(chartCanvas.clientWidth), height = this.resize(chartCanvas.clientHeight);
+        }
+        if(height > maxHeight) {
+            this.resizeFactor *= maxHeight / height;
+            width = this.resize(chartCanvas.clientWidth), height = this.resize(chartCanvas.clientHeight);
+        }
+
         // Set the Size of the Canvas to the ClientSize of the HTML Element
-        chartCanvas.width = resize(chartCanvas.clientWidth);
-        chartCanvas.height = resize(chartCanvas.clientHeight);
-        // canvasContext.scale(window.devicePixelRatio, window.devicePixelRatio);
+        chartCanvas.width = this.resize(chartCanvas.clientWidth);
+        chartCanvas.height = this.resize(chartCanvas.clientHeight);
 
         // Read the Min and Max Values from the Data
         chartConfiguration.data.values.forEach(dataset => {
@@ -114,9 +126,9 @@ class Chart {
         this.dimensions.canvas.width = chartCanvas.width;
         this.dimensions.canvas.height = chartCanvas.height;
 
-        this.dimensions.coordinateSystem.offsets.lr = resize(SIDE_SPACE);
+        this.dimensions.coordinateSystem.offsets.lr = this.resize(SIDE_SPACE);
         this.dimensions.coordinateSystem.offsets.tb = 0;
-        this.dimensions.coordinateSystem.safeArea = resize(SAFE_AREA);
+        this.dimensions.coordinateSystem.safeArea = this.resize(SAFE_AREA);
         this.dimensions.coordinateSystem.width = this.dimensions.canvas.width - this.dimensions.coordinateSystem.offsets.lr * 2;
         this.dimensions.coordinateSystem.height = this.dimensions.canvas.height - this.dimensions.coordinateSystem.offsets.tb * 2;
 
@@ -163,8 +175,8 @@ class Chart {
         // Context Settings for Coordinate System
         context.strokeStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
         context.fillStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
-        context.lineWidth = resize(2);
-        context.font = resize(20) + "px " + chartConfiguration.chartStyle.fontFamily;
+        context.lineWidth = this.resize(2);
+        context.font = this.resize(20) + "px " + chartConfiguration.chartStyle.fontFamily;
 
         // X-Axis
         context.beginPath();
@@ -181,23 +193,28 @@ class Chart {
         if(this.data.extremeValues.min >= 0 && this.data.extremeValues.max >= 0) {
             fromY -= this.dimensions.coordinateSystem.safeArea;
         }
-        console.log(fromY + " -- " + toY);
         context.moveTo(this.dimensions.coordinateSystem.offsets.lr, fromY);
         context.lineTo(this.dimensions.coordinateSystem.offsets.lr, toY);
         context.stroke();
 
         // X-Axis Labels
         for(let i = 0; i < chartConfiguration.data.keys.length; i++) {
-            // TODO: Place Labels on top of the X-Axis if all Values are negative
-
             // Small Dash
             context.beginPath();
             context.moveTo(this.translateXCoordinate(i), this.translateYCoordinate(0));
-            context.lineTo(this.translateXCoordinate(i), this.translateYCoordinate(0) + resize(10));
+            if(this.data.extremeValues.min <= 0 && this.data.extremeValues.max <= 0) {
+                context.lineTo(this.translateXCoordinate(i), this.translateYCoordinate(0) - this.resize(10));
+            } else {
+                context.lineTo(this.translateXCoordinate(i), this.translateYCoordinate(0) + this.resize(10));
+            }
             context.stroke();
 
             // Label
-            context.fillText(chartConfiguration.data.keys[i], this.translateXCoordinate(i) - context.measureText(chartConfiguration.data.keys[i]).width / 2, this.translateYCoordinate(0) + resize(10) + resize(20));
+            let y = this.translateYCoordinate(0) + this.resize(10) + this.resize(20);
+            if(this.data.extremeValues.min <= 0 && this.data.extremeValues.max <= 0) {
+                y = this.translateYCoordinate(0) - this.resize(10);
+            }
+            context.fillText(chartConfiguration.data.keys[i], this.translateXCoordinate(i) - context.measureText(chartConfiguration.data.keys[i]).width / 2, y);
         }
 
         // Y-Axis Labels
@@ -205,12 +222,12 @@ class Chart {
             // Small Dash
             context.beginPath();
             context.moveTo(this.dimensions.coordinateSystem.offsets.lr, this.translateYCoordinate(label));
-            context.lineTo(this.dimensions.coordinateSystem.offsets.lr - resize(10), this.translateYCoordinate(label));
+            context.lineTo(this.dimensions.coordinateSystem.offsets.lr - this.resize(10), this.translateYCoordinate(label));
             context.stroke();
 
             // Label
             let labelString = label.toFixed(this.data.labels.spacingDecimals);
-            context.fillText(labelString, this.dimensions.coordinateSystem.offsets.lr - resize(10) - context.measureText(labelString).width, this.translateYCoordinate(label) + resize(6.25));
+            context.fillText(labelString, this.dimensions.coordinateSystem.offsets.lr - this.resize(10) - context.measureText(labelString).width, this.translateYCoordinate(label) + this.resize(6.25));
         }
     }
 
@@ -239,7 +256,7 @@ class Chart {
      */
     calculateYLabelDistance = () => {
         let extrema = Math.max(Math.abs(this.data.extremeValues.min), Math.abs(this.data.extremeValues.max));
-        let height = reverseResize(this.dimensions.chartData.height);
+        let height = this.reverseResize(this.dimensions.chartData.height);
 
         // Use relative Size of the Quadrant to calculate the amount of Labels that should be used for it
         let yScaleHeight = Math.abs(this.data.extremeValues.min) + Math.abs(this.data.extremeValues.max);
@@ -362,7 +379,7 @@ class Chart {
             case "line":
             case "curve":
                 context.beginPath();
-                context.arc(x, y, resize(2.5), 0, 2 * Math.PI);
+                context.arc(x, y, this.resize(2.5), 0, 2 * Math.PI);
                 context.stroke();
                 context.fill();
 
