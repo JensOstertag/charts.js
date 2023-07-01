@@ -78,6 +78,7 @@ class Chart {
         }
     };
     chartType = "";
+    alpha = 0;
 
     /**
      * Creates a new Chart with the given ChartConfiguration
@@ -164,11 +165,25 @@ class Chart {
             this.data.labels.max += this.data.labels.spacing;
         }
 
+        let update = setInterval(() => {
+            if(this.alpha >= 1) {
+                clearInterval(update);
+                return;
+            }
+            this.draw(canvasContext, chartConfiguration);
+            this.alpha = Math.min(1, this.alpha + .1);
+        }, 30);
+    }
+
+    draw = (context, chartConfiguration) => {
+        // Clear the Canvas
+        context.clearRect(0, 0, this.dimensions.canvas.width, this.dimensions.canvas.height);
+
         // Draw the Coordinate System
-        this.drawCoordinateSystem(canvasContext, chartConfiguration);
+        this.drawCoordinateSystem(context, chartConfiguration);
 
         // Draw the Data
-        this.drawData(canvasContext, chartConfiguration);
+        this.drawData(context, chartConfiguration);
     }
 
     drawCoordinateSystem = (context, chartConfiguration) => {
@@ -351,16 +366,18 @@ class Chart {
      */
     drawDatapoints = (context, datasets, colors, chartType) => {
         datasets.forEach((dataset, datasetIndex) => {
-            context.strokeStyle = this.rgba(colors[datasetIndex], 1);
-            context.fillStyle = this.rgba(colors[datasetIndex], 0.5);
+            context.strokeStyle = this.rgba(colors[datasetIndex], 1 * this.alpha);
+            context.fillStyle = this.rgba(colors[datasetIndex], .5 * this.alpha);
+
+            let datasetCoordinates = [];
 
             dataset.forEach((datapoint, index) => {
                 let coordinates = this.getCanvasCoordinates(index, datapoint);
-                dataset[index] = coordinates;
+                datasetCoordinates.push(coordinates);
                 this.drawNode(context, coordinates.x, coordinates.y, chartType);
             });
 
-            this.drawLine(context, dataset, chartType);
+            this.drawLine(context, datasetCoordinates, chartType);
         });
     }
 
@@ -530,7 +547,11 @@ class Chart {
      * Get RGBA Color with Opacity Aspect
      */
     rgba = (color, opacity) => {
-        let alpha = Math.round(Math.min(Math.max(opacity || 1, 0), 1) * 255);
-        return color + alpha.toString(16).toLowerCase();
+        let alpha = Math.round(Math.min(Math.max(opacity != null ? opacity : 1, 0), 1) * 255);
+        let hex = alpha.toString(16).toLowerCase();
+        if(hex.length < 2) {
+            hex = "0" + hex;
+        }
+        return color + hex;
     }
 }

@@ -42,6 +42,13 @@
       Bar Chart
     </p>
     <canvas style="width: 600px; height: 400px;" id="chart-4">
+    </canvas>
+
+    <p>
+      Multi-line Chart
+    </p>
+    <canvas style="width: 600px; height: 400px;" id="chart-5">
+    </canvas>
 
     <script src="./script/charts.js" ></script>
     <script>
@@ -156,6 +163,50 @@
               3,
               4,
               5
+            ]
+          ]
+        }
+      });
+
+      new Chart().create({
+        htmlElementId: "chart-5",
+        chartType: "curve",
+        chartStyle: {
+          mainColor: "#888888",
+          valueColors: [
+            "#2f7cff",
+            "#ff7c2f"
+          ],
+          fontFamily: "Lato"
+        },
+        data: {
+          keys: [
+            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
+          ],
+          values: [
+            [
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100)
+            ],
+            [
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100),
+              getRandomArbitrary(-100, 100)
             ]
           ]
         }
