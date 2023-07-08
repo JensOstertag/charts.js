@@ -5,6 +5,8 @@ const SAFE_AREA = 30;
 
 const LABELS_PER_100_PIXELS = 2;
 
+const RESIZE_LISTENERS = [];
+
 class Chart {
     resizeFactor = RESIZE_FACTOR;
     resize = (value) => {
@@ -82,6 +84,8 @@ class Chart {
 
     /**
      * Creates a new Chart with the given ChartConfiguration
+     * @param {Array} chartConfiguration Chart Configuration
+     * @returns {void}
      */
     create = (chartConfiguration) => {
         if(!(this.validateConfiguration(chartConfiguration))) {
@@ -165,6 +169,18 @@ class Chart {
             this.data.labels.max += this.data.labels.spacing;
         }
 
+        console.log("create");
+
+        // Handle Resizes
+        let resize = () => {
+            this.create(chartConfiguration);
+        }
+        if(RESIZE_LISTENERS[chartConfiguration.htmlElementId] !== true) {
+            window.addEventListener("resize", resize);
+            RESIZE_LISTENERS[chartConfiguration.htmlElementId] = true;
+        }
+
+        this.draw(canvasContext, chartConfiguration);
         let update = setInterval(() => {
             if(this.alpha >= 1) {
                 clearInterval(update);
@@ -175,6 +191,12 @@ class Chart {
         }, 30);
     }
 
+    /**
+     * (Re-)draws the Chart
+     * @param {CanvasRenderingContext2D} context Canvas Context
+     * @param {Array} chartConfiguration Chart Configuration
+     * @returns {void}
+     */
     draw = (context, chartConfiguration) => {
         // Clear the Canvas
         context.clearRect(0, 0, this.dimensions.canvas.width, this.dimensions.canvas.height);
@@ -186,11 +208,17 @@ class Chart {
         this.drawData(context, chartConfiguration);
     }
 
+    /**
+     * Draws the Coordinate System (X and Y Axis with Labels)
+     * @param {CanvasRenderingContext2D} context Canvas Context
+     * @param {Array} chartConfiguration Chart Configuration
+     * @returns {void}
+     */
     drawCoordinateSystem = (context, chartConfiguration) => {
         // Context Settings for Coordinate System
         context.strokeStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
         context.fillStyle = this.rgba(chartConfiguration.chartStyle.mainColor, 1);
-        context.lineWidth = this.resize(2);
+        context.lineWidth = this.resize(chartConfiguration.chartStyle.strokeWidth.coordinateSystem);
         context.font = this.resize(20) + "px " + chartConfiguration.chartStyle.fontFamily;
 
         // X-Axis
@@ -255,7 +283,14 @@ class Chart {
         }
     }
 
+    /**
+     * Draws the Data Points
+     * @param {CanvasRenderingContext2D} context Canvas Context
+     * @param {Array} chartConfiguration Chart Configuration
+     * @returns {void}
+     */
     drawData = (context, chartConfiguration) => {
+        context.lineWidth = this.resize(chartConfiguration.chartStyle.strokeWidth.charts);
         this.drawDatapoints(context, chartConfiguration.data.values, chartConfiguration.chartStyle.valueColors, chartConfiguration.chartType);
     }
 
@@ -344,8 +379,8 @@ class Chart {
 
     /**
      * Translates an X Coordinate of the Chart Data to a X Coordinate of the Canvas
-     * @param {Number} nthValue
-     * @returns Canvas X Coordinate
+     * @param {Number} nthValue n-th Value of the Chart Data
+     * @returns {Number} Canvas X Coordinate
      */
     translateXCoordinate = (nthValue) => {
         let offset = this.dimensions.chartData.offsets.lr + this.dimensions.coordinateSystem.offsets.lr;
@@ -358,8 +393,8 @@ class Chart {
 
     /**
      * Translates a Y Coordinate of the Chart Data to a Y Coordinate of the Canvas
-     * @param {Number} y 
-     * @returns Canvas Y Coordinate
+     * @param {Number} y Y Coordinate in the Coordinate System
+     * @returns {Number} Canvas Y Coordinate
      */
     translateYCoordinate = (y) => {
         let min = this.data.labels.min, max = this.data.labels.max;
@@ -371,9 +406,25 @@ class Chart {
     }
 
     /**
-     * Draws Datapoints of multiple Datasets
+     * Translates X and Y Coordinates of the Chart Data to X and Y Coordinates of the Canvas
+     * @param {Number} nthValue n-th Value of the Chart Data
+     * @param {Number} datapoint Y Coordinate in the Coordinate System
+     * @returns {Object} Object with X and Y Coordinates of the Canvas
      */
-    drawDatapoints = (context, datasets, colors, chartType) => {
+    getCanvasCoordinates = (nthValue, datapoint) => {
+        let x = this.translateXCoordinate(nthValue);
+        let y = this.translateYCoordinate(datapoint);
+        return {x: x, y: y};
+    }
+
+    /**
+     * Draws Datapoints of multiple Datasets
+     * @param {CanvasRenderingContext2D} context Canvas Context
+     * @param {Array} datasets Datasets
+     * @param {Array} colors Colors of the Datasets
+     * @returns {void}
+     */
+    drawDatapoints = (context, datasets, colors) => {
         datasets.forEach((dataset, datasetIndex) => {
             context.strokeStyle = this.rgba(colors[datasetIndex], 1 * this.alpha);
             context.fillStyle = this.rgba(colors[datasetIndex], .5 * this.alpha);
@@ -383,24 +434,22 @@ class Chart {
             dataset.forEach((datapoint, index) => {
                 let coordinates = this.getCanvasCoordinates(index, datapoint);
                 datasetCoordinates.push(coordinates);
-                this.drawNode(context, coordinates.x, coordinates.y, chartType);
+                this.drawNode(context, coordinates.x, coordinates.y);
             });
 
-            this.drawLine(context, datasetCoordinates, chartType);
+            this.drawLine(context, datasetCoordinates);
         });
-    }
-
-    getCanvasCoordinates = (nthValue, datapoint) => {
-        let x = this.translateXCoordinate(nthValue);
-        let y = this.translateYCoordinate(datapoint);
-        return {x: x, y: y};
     }
 
     /**
      * Draws a single Datapoint at a specific Position
+     * @param {CanvasRenderingContext2D} context Canvas Context
+     * @param {Number} x X Coordinate of the Canvas
+     * @param {Number} y Y Coordinate of the Canvas
+     * @returns {void}
      */
-    drawNode = (context, x, y, chartType) => {
-        switch(chartType) {
+    drawNode = (context, x, y) => {
+        switch(this.chartType) {
             case "node":
             case "node-line":
             case "node-curve":
@@ -425,15 +474,18 @@ class Chart {
                 // No Nodes
                 break;
             default:
-                console.error("Invalid Chart Type: " + chartType);
+                console.error("Invalid Chart Type: " + this.chartType);
         }
     }
 
     /**
      * Draws either a Line or a Curve between the given Points
+     * @param {CanvasRenderingContext2D} context Canvas Context
+     * @param {Array} points Array of Datapoints with their X and Y Coordinates of the Canvas
+     * @returns {void}
      */
-    drawLine = (context, points, chartType) => {
-        switch(chartType) {
+    drawLine = (context, points) => {
+        switch(this.chartType) {
             case "line":
             case "node-line":
                 context.beginPath();
@@ -489,6 +541,8 @@ class Chart {
 
     /**
      * Validates the ChartConfiguration
+     * @param {Array} chartConfiguration ChartConfiguration
+     * @returns {Boolean} True if the ChartConfiguration is valid, otherwise false
      */
     validateConfiguration = (chartConfiguration) => {
         // HTML Element ID
@@ -562,6 +616,9 @@ class Chart {
 
     /**
      * Get RGBA Color with Opacity Aspect
+     * @param {String} color Hex Color
+     * @param {Number} opacity Opacity
+     * @returns {String} RGBA Color
      */
     rgba = (color, opacity) => {
         let alpha = Math.round(Math.min(Math.max(opacity != null ? opacity : 1, 0), 1) * 255);
