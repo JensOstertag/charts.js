@@ -213,7 +213,16 @@ class Chart {
         context.stroke();
 
         // X-Axis Labels
+        let endOfLastLabel = null;
         for(let i = 0; i < chartConfiguration.data.keys.length; i++) {
+            // Omit Label if it overlaps the previous one
+            let x = this.translateXCoordinate(i);
+            let labelWidth = context.measureText(chartConfiguration.data.keys[i]).width;
+            if(endOfLastLabel !== null && x - labelWidth / 2 - this.dimensions.coordinateSystem.safeArea / 2 < endOfLastLabel) {
+                continue;
+            }
+            endOfLastLabel = x + labelWidth / 2;
+
             // Small Dash
             context.beginPath();
             context.moveTo(this.translateXCoordinate(i), this.translateYCoordinate(0));
@@ -229,7 +238,7 @@ class Chart {
             if(this.data.extremeValues.min <= 0 && this.data.extremeValues.max <= 0) {
                 y = this.translateYCoordinate(0) - this.resize(10);
             }
-            context.fillText(chartConfiguration.data.keys[i], this.translateXCoordinate(i) - context.measureText(chartConfiguration.data.keys[i]).width / 2, y);
+            context.fillText(chartConfiguration.data.keys[i], this.translateXCoordinate(i) - labelWidth / 2, y);
         }
 
         // Y-Axis Labels
