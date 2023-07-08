@@ -393,8 +393,8 @@ class Chart {
     drawNode = (context, x, y, chartType) => {
         switch(chartType) {
             case "node":
-            case "line":
-            case "curve":
+            case "node-line":
+            case "node-curve":
                 context.beginPath();
                 context.arc(x, y, this.resize(2.5), 0, 2 * Math.PI);
                 context.stroke();
@@ -411,6 +411,10 @@ class Chart {
                 context.fill();
 
                 break;
+            case "line":
+            case "curve":
+                // No Nodes
+                break;
             default:
                 console.error("Invalid Chart Type: " + chartType);
         }
@@ -422,6 +426,7 @@ class Chart {
     drawLine = (context, points, chartType) => {
         switch(chartType) {
             case "line":
+            case "node-line":
                 context.beginPath();
                 for(let i = 0; i < points.length - 1; i++) {
                     context.moveTo(points[i].x, points[i].y);
@@ -430,9 +435,12 @@ class Chart {
                 context.stroke();
                 break;
             case "curve":
+            case "node-curve":
                 let f = .3;
                 let t = .6;
                 let m = 0;
+
+                context.beginPath();
 
                 let previousPoint = null;
                 let previousDeltaX = 0;
