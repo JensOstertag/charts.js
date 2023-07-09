@@ -600,14 +600,20 @@ class Chart {
         }
 
         let chartStyleProperty = chartConfiguration.chartStyle;
-        if(!(chartStyleProperty.hasOwnProperty("mainColor") && chartStyleProperty.hasOwnProperty("valueColors") && chartStyleProperty.hasOwnProperty("fontFamily"))) {
-            console.error("ChartConfiguration requires a ChartStyle property with a MainColor and ValuesColor property");
+        if(!(chartStyleProperty.hasOwnProperty("mainColor") && chartStyleProperty.hasOwnProperty("valueColors") && chartStyleProperty.hasOwnProperty("strokeWidth") && chartStyleProperty.hasOwnProperty("fontFamily"))) {
+            console.error("ChartConfiguration requires a ChartStyle property with a MainColor, ValuesColor, StrokeStyle and FontFamily property");
             return false;
         }
 
         let valueColors = chartStyleProperty.valueColors;
-        if(valueColors.length !== values.length) {
+        if(!(valueColors.length === values.length)) {
             console.error("ChartConfigiration requires the same amount of ValueColors as Datasets");
+            return false;
+        }
+
+        let strokeWidth = chartStyleProperty.strokeWidth;
+        if(!(strokeWidth.hasOwnProperty("charts") && strokeWidth.hasOwnProperty("coordinateSystem"))) {
+            console.error("ChartConfiguration requires a StrokeWidth property with a Charts and CoordinateSystem property");
             return false;
         }
 
